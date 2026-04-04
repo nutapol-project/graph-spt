@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPT Complexity Explorer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Anybody:wght@400;700;900&display=swap');
+ 
+:root {
+  --bg:      #060810;
+  --card:    #0d1117;
+  --border:  #1a2030;
+  --c3: #06ffa5;
+  --c4: #4da6ff;
+  --c5: #ffb830;
+  --c6: #ff4d6d;
+  --txt: #cdd6f4;
+  --sub: #6c7a9c;
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Anybody', sans-serif;
+}
+ 
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+ 
+body {
+  background: var(--bg);
+  color: var(--txt);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+ 
+/* ─── HEADER ─── */
+.hero {
+  padding: 56px 32px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 50%, #06ffa512 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 50%, #4da6ff0e 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-tag {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--sub);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.hero h1 {
+  font-family: var(--display);
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 16px;
+}
+.hero h1 span.g1 { color: var(--c3); }
+.hero h1 span.g2 { color: var(--c4); }
+.hero h1 span.g3 { color: var(--c5); }
+.hero p {
+  color: var(--sub);
+  font-size: 12px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+ 
+/* ─── LAYOUT ─── */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; }
+ 
+.section-label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sub);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+ 
+/* ─── STAT CARDS ─── */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 36px;
+}
+.stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.stat::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.stat.c3::before { background: var(--c3); }
+.stat.c4::before { background: var(--c4); }
+.stat.c5::before { background: var(--c5); }
+.stat.c6::before { background: var(--c6); }
+.stat-val {
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.stat.c3 .stat-val { color: var(--c3); }
+.stat.c4 .stat-val { color: var(--c4); }
+.stat.c5 .stat-val { color: var(--c5); }
+.stat.c6 .stat-val { color: var(--c6); }
+.stat-lbl { font-size: 10px; color: var(--sub); letter-spacing: 0.1em; }
+ 
+/* ─── CHARTS ─── */
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 700px) { .chart-grid { grid-template-columns: 1fr; } }
+ 
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.card-full { grid-column: 1 / -1; }
+ 
+.card-title {
+  font-family: var(--display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--txt);
+  margin-bottom: 4px;
+}
+.card-sub {
+  font-size: 10px;
+  color: var(--sub);
+  margin-bottom: 20px;
+  letter-spacing: 0.05em;
+}
+canvas { max-height: 340px; }
+ 
+/* ─── LEGEND ─── */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+}
+.leg {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--sub);
+}
+.leg-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+ 
+/* ─── TABLE ─── */
+.tbl-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sub);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody td {
+  padding: 11px 16px;
+  border-bottom: 1px solid #0d1117;
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+ 
+.d3 { color: var(--c3); font-weight: 600; }
+.d4 { color: var(--c4); font-weight: 600; }
+.d5 { color: var(--c5); font-weight: 600; }
+.d6 { color: var(--c6); font-weight: 600; }
+ 
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.ok   { background: #06ffa520; color: var(--c3); }
+.slow { background: #ffb83020; color: var(--c5); }
+.fail { background: #ff4d6d20; color: var(--c6); }
+.inf  { background: #4da6ff15; color: var(--c4); }
+ 
+.ref-line-label {
+  position: absolute;
+  right: 8px;
+  font-size: 9px;
+  color: var(--sub);
+  opacity: 0.7;
+}
+ 
+/* ─── NOTE BOX ─── */
+.note {
+  background: #4da6ff08;
+  border: 1px solid #4da6ff22;
+  border-left: 3px solid var(--c4);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 36px;
+  font-size: 12px;
+  color: var(--sub);
+  line-height: 1.8;
+}
+.note strong { color: var(--txt); }
+</style>
+</head>
+<body>
+ 
+<div class="hero">
+  <div class="hero-tag">Spanning Tree Analysis</div>
+  <h1><span class="g1">SPT</span> vs <span class="g2">Nodes</span> vs <span class="g3">Degree</span></h1>
+  <p>จำนวน Spanning Trees และเวลาคำนวณ (Brute Force vs Kirchhoff) ตามขนาด Network และ Average Degree</p>
+</div>
+ 
+<div class="container">
+ 
+  <!-- Key stats -->
+  <div class="section-label">ข้อมูลสำคัญ</div>
+  <div class="stat-row">
+    <div class="stat c3">
+      <div class="stat-val">162</div>
+      <div class="stat-lbl">SPT น้อยสุด — n=9, deg=3</div>
+    </div>
+    <div class="stat c4">
+      <div class="stat-val">4,469</div>
+      <div class="stat-lbl">SPT ของ paper เดิม — n=9, deg≈3.8</div>
+    </div>
+    <div class="stat c5">
+      <div class="stat-val">4.3×10¹⁹</div>
+      <div class="stat-lbl">SPT มากสุด — n=30, deg=6</div>
+    </div>
+    <div class="stat c6">
+      <div class="stat-val">&lt;1ms</div>
+      <div class="stat-lbl">Kirchhoff ใช้เวลา — ทุก case</div>
+    </div>
+  </div>
+ 
+  <div class="note">
+    <strong>วิธีอ่านกราฟ:</strong> แกน Y ใช้ log scale (log₁₀) เพราะค่าต่างกันหลายพันล้านเท่า
+    เช่น log₁₀(1,000) = 3, log₁₀(1,000,000) = 6 — เพิ่มขึ้น 1 หน่วยบนกราฟ = ค่าจริงเพิ่มขึ้น 10 เท่า
+    <br><strong>Brute Force:</strong> วัดจริงสำหรับ cases เล็ก (✓) ส่วน cases ใหญ่เป็นค่าประมาณจาก C(E,n-1) ÷ 44,000 iter/s
+  </div>
+ 
+  <!-- Charts row 1 -->
+  <div class="section-label">กราฟเปรียบเทียบ</div>
+  <div class="chart-grid">
+ 
+    <div class="card">
+      <div class="card-title">จำนวน Spanning Trees (SPT)</div>
+      <div class="card-sub">แกน Y = log₁₀(SPT) — ยิ่ง degree สูง SPT พุ่งขึ้นเร็วมาก</div>
+      <canvas id="cSPT"></canvas>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:var(--c3)"></div>deg = 3</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c4)"></div>deg = 4</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c5)"></div>deg = 5</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c6)"></div>deg = 6</div>
+      </div>
+    </div>
+ 
+    <div class="card">
+      <div class="card-title">เวลา Brute Force</div>
+      <div class="card-sub">แกน Y = log₁₀(วินาที) — เส้นประแนวนอน = อ้างอิงเวลา</div>
+      <canvas id="cBF"></canvas>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:var(--c3)"></div>deg = 3</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c4)"></div>deg = 4</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c5)"></div>deg = 5</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c6)"></div>deg = 6</div>
+      </div>
+    </div>
+ 
+    <div class="card card-full">
+      <div class="card-title">เปรียบเทียบ Brute Force vs Kirchhoff (เวลา)</div>
+      <div class="card-sub">Kirchhoff ใช้เวลา &lt;1ms ทุก case — แสดงเป็นเส้นแบนที่ log₁₀(0.001) = −3</div>
+      <canvas id="cCompare"></canvas>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:var(--c3)"></div>BF deg=3</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c4)"></div>BF deg=4</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c5)"></div>BF deg=5</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--c6)"></div>BF deg=6</div>
+        <div class="leg"><div class="leg-dot" style="background:#fff; opacity:.5"></div>Kirchhoff (ทุก deg)</div>
+      </div>
+    </div>
+ 
+  </div>
+ 
+  <!-- Table -->
+  <div class="section-label">ตารางข้อมูลทั้งหมด</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nodes (n)</th>
+          <th>Avg Degree</th>
+          <th>Edges</th>
+          <th class="num">C(E, n−1)</th>
+          <th class="num">จำนวน SPT</th>
+          <th class="num">Kirchhoff</th>
+          <th class="num">Brute Force</th>
+          <th>สถานะ BF</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+ 
+</div><!-- /container -->
+ 
+<script>
+// ─── DATA (จากการรันจริง) ───────────────────────────────
+const DATA = [
+  // n, deg, edges, spt, kirchhoff_ms, bf_actual_s, est_bf_s, bf_done
+  [9,  3, 13,  162,                     0.77,  0.037,    0.029,  true],
+  [9,  4, 18,  6664,                    0.50,  0.946,    0.995,  true],
+  [9,  5, 22,  51106,                   0.39,  6.807,    7.27,   true],
+  [9,  6, 27,  369138,                  0.38,  null,     50.5,   false],
+  [10, 3, 15,  687,                     0.38,  0.112,    0.114,  true],
+  [10, 4, 20,  19149,                   0.37,  4.014,    3.82,   true],
+  [10, 5, 25,  236472,                  0.33,  null,     46.4,   false],
+  [10, 6, 30,  1692299,                 0.35,  null,     325,    false],
+  [15, 3, 22,  9061,                    0.67,  9.517,    7.27,   true],
+  [15, 4, 30,  4452132,                 0.53,  null,     3305,   false],
+  [15, 5, 37,  111657889,               0.40,  null,     138797, false],
+  [15, 6, 45,  3915922006,              0.51,  null,     3792530,false],
+  [20, 3, 30,  289152,                  0.42,  null,     1242,   false],
+  [20, 4, 40,  436387024,               0.39,  null,     2983691,false],
+  [20, 5, 50,  32549914340,             0.38,  null,     6.91e8, false],
+  [20, 6, 60,  9048173558230,           0.39,  null,     4.65e10,false],
+  [30, 3, 45,  396045555,               0.53,  null,     1.47e7, false],
+  [30, 4, 60,  10576659797740,          0.41,  null,     2.60e12,false],
+  [30, 5, 75,  4.39e16,                 0.52,  null,     1.16e16,false],
+  [30, 6, 90,  4.28e19,                 0.71,  null,     7.52e18,false],
+];
+ 
+const NODES   = [9,10,15,20,30];
+const DEGS    = [3,4,5,6];
+const COLORS  = { 3:'#06ffa5', 4:'#4da6ff', 5:'#ffb830', 6:'#ff4d6d' };
+const DCLS    = { 3:'d3', 4:'d4', 5:'d5', 6:'d6' };
+ 
+// helpers
+function fmt_spt(v) {
+  if (v >= 1e18) return (v/1e18).toPrecision(3)+'×10¹⁸';
+  if (v >= 1e15) return (v/1e15).toPrecision(3)+'×10¹⁵';
+  if (v >= 1e12) return (v/1e12).toPrecision(3)+'×10¹²';
+  if (v >= 1e9)  return (v/1e9).toPrecision(3)+'B';
+  if (v >= 1e6)  return (v/1e6).toPrecision(3)+'M';
+  if (v >= 1e3)  return (v/1e3).toPrecision(3)+'K';
+  return v.toLocaleString();
+}
+function fmt_iter(n,e) {
+  // C(e, n-1) already estimated
+  const r = DATA.find(d=>d[0]===n&&d[2]===e);
+  const est = r ? r[6]*44000 : 0;
+  return fmt_spt(est);
+}
+function fmt_time(s, done) {
+  if (s === null) return '—';
+  const suf = done ? '' : ' <span style="opacity:.5">(est)</span>';
+  if (s >= 86400*365*1e6) return `${(s/86400/365/1e6).toFixed(0)} ล้านปี`+suf;
+  if (s >= 86400*365*1e3) return `${(s/86400/365/1e3).toFixed(0)} พันปี`+suf;
+  if (s >= 86400*365)     return `${(s/86400/365).toFixed(1)} ปี`+suf;
+  if (s >= 86400)         return `${(s/86400).toFixed(1)} วัน`+suf;
+  if (s >= 3600)          return `${(s/3600).toFixed(1)} ชม.`+suf;
+  if (s >= 60)            return `${(s/60).toFixed(1)} นาที`+suf;
+  return `${s.toFixed(3)} วิ`+suf;
+}
+function pill(s) {
+  if (s < 10)        return '<span class="pill ok">ทำได้</span>';
+  if (s < 3600)      return '<span class="pill slow">ช้า</span>';
+  if (s < 86400*365) return '<span class="pill fail">ไม่ได้</span>';
+  return '<span class="pill inf">∞</span>';
+}
+ 
+// ─── CHART CONFIG ──────────────────────────────────────
+Chart.defaults.color = '#6c7a9c';
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 10;
+ 
+const BASE_SCALES = {
+  x: {
+    grid: { color: '#1a2030' },
+    ticks: { color: '#6c7a9c' },
+    title: { display: true, text: 'จำนวน Nodes (n)', color: '#6c7a9c', font: { size: 10 } }
+  },
+  y: {
+    grid: { color: '#1a2030' },
+    ticks: { color: '#6c7a9c' },
+  }
+};
+ 
+function byDeg(deg, col) {
+  return NODES.map(n => {
+    const r = DATA.find(d => d[0]===n && d[1]===deg);
+    return r ? Math.log10(r[col]) : null;
+  });
+}
+ 
+function bfByDeg(deg) {
+  return NODES.map(n => {
+    const r = DATA.find(d => d[0]===n && d[1]===deg);
+    if (!r) return null;
+    const t = r[5] !== null ? r[5] : r[6];
+    return t > 0 ? Math.log10(t) : null;
+  });
+}
+ 
+const TOOLTIP_CFG = {
+  backgroundColor: '#0d1117',
+  borderColor: '#1a2030',
+  borderWidth: 1,
+  padding: 10,
+  titleFont: { family: "'IBM Plex Mono'", size: 10 },
+  bodyFont:  { family: "'IBM Plex Mono'", size: 10 },
+};
+ 
+// ─── CHART 1: SPT ──────────────────────────────────────
+new Chart(document.getElementById('cSPT'), {
+  type: 'line',
+  data: {
+    labels: NODES,
+    datasets: DEGS.map(d => ({
+      label: `deg ${d}`,
+      data: byDeg(d, 3),
+      borderColor: COLORS[d],
+      backgroundColor: COLORS[d]+'18',
+      borderWidth: 2.5,
+      pointRadius: 5, pointHoverRadius: 8,
+      tension: 0.35, fill: false,
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true, aspectRatio: 1.6,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...TOOLTIP_CFG,
+        callbacks: {
+          title: ctx => `n = ${NODES[ctx[0].dataIndex]}`,
+          label: ctx => {
+            const n = NODES[ctx.dataIndex], deg = DEGS[ctx.datasetIndex];
+            const r = DATA.find(d => d[0]===n && d[1]===deg);
+            return r ? ` SPT = ${fmt_spt(r[3])}` : '';
+          }
+        }
+      }
+    },
+    scales: {
+      ...BASE_SCALES,
+      y: { ...BASE_SCALES.y, title: { display: true, text: 'log₁₀(SPT)', color: '#6c7a9c', font:{size:10} } }
+    }
+  }
+});
+ 
+// ─── CHART 2: BF Time + ref lines ──────────────────────
+const REF_LINES = [
+  { label:'1 วินาที', val: 0,            color:'#06ffa5' },
+  { label:'1 นาที',   val: Math.log10(60), color:'#4da6ff' },
+  { label:'1 ชั่วโมง',val: Math.log10(3600), color:'#ffb830' },
+  { label:'1 วัน',    val: Math.log10(86400), color:'#ff4d6d' },
+  { label:'1 ปี',     val: Math.log10(86400*365), color:'#c084fc' },
+  { label:'100 ปี',   val: Math.log10(86400*365*100), color:'#818cf8' },
+];
+ 
+new Chart(document.getElementById('cBF'), {
+  type: 'line',
+  data: {
+    labels: NODES,
+    datasets: [
+      ...DEGS.map(d => ({
+        label: `deg ${d}`,
+        data: bfByDeg(d),
+        borderColor: COLORS[d], backgroundColor: COLORS[d]+'18',
+        borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 8,
+        tension: 0.35, fill: false, order: 1,
+      })),
+      ...REF_LINES.map(r => ({
+        label: r.label,
+        data: NODES.map(() => r.val),
+        borderColor: r.color+'55', borderWidth: 1,
+        borderDash: [4, 4], pointRadius: 0, fill: false, order: 2,
+      }))
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true, aspectRatio: 1.6,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...TOOLTIP_CFG,
+        filter: item => item.dataset.order === 1,
+        callbacks: {
+          title: ctx => `n = ${NODES[ctx[0].dataIndex]}`,
+          label: ctx => {
+            const n = NODES[ctx.dataIndex], deg = DEGS[ctx.datasetIndex];
+            const r = DATA.find(d => d[0]===n && d[1]===deg);
+            if (!r) return '';
+            const t = r[5] !== null ? r[5] : r[6];
+            const src = r[5] !== null ? '(วัดจริง)' : '(ประมาณ)';
+            return ` ${fmt_time(t,r[7])} ${src}`;
+          }
+        }
+      }
+    },
+    scales: {
+      ...BASE_SCALES,
+      y: {
+        ...BASE_SCALES.y,
+        title: { display: true, text: 'log₁₀(วินาที)', color: '#6c7a9c', font:{size:10} },
+        ticks: {
+          color: '#6c7a9c',
+          callback: v => {
+            const m = {0:'1s', 1:'10s', 2:'~3min', 3:'~17min', 4:'~3hr',
+                        5:'~1day', 6:'~12d', 7:'~4mo', 8:'~3yr', 9:'~32yr',
+                        10:'~317yr', 11:'~3Kyr', 12:'~32Kyr', 16:'~1G yr', 18:'~10G yr'};
+            return m[Math.round(v)] || '';
+          }
+        }
+      }
+    }
+  }
+});
+ 
+// ─── CHART 3: Compare ──────────────────────────────────
+new Chart(document.getElementById('cCompare'), {
+  type: 'line',
+  data: {
+    labels: NODES,
+    datasets: [
+      ...DEGS.map(d => ({
+        label: `BF deg=${d}`,
+        data: bfByDeg(d),
+        borderColor: COLORS[d], backgroundColor: COLORS[d]+'10',
+        borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 8,
+        tension: 0.35, fill: false, order: 1,
+      })),
+      {
+        label: 'Kirchhoff',
+        data: NODES.map(() => Math.log10(0.0008)),
+        borderColor: '#ffffff66', backgroundColor: '#ffffff08',
+        borderWidth: 2, borderDash: [6,3],
+        pointRadius: 0, fill: true, order: 2,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true, aspectRatio: 2.6,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...TOOLTIP_CFG,
+        filter: item => item.dataset.order === 1,
+        callbacks: {
+          title: ctx => `n = ${NODES[ctx[0].dataIndex]}`,
+          label: ctx => {
+            const n = NODES[ctx.dataIndex], deg = DEGS[ctx.datasetIndex];
+            const r = DATA.find(d => d[0]===n && d[1]===deg);
+            if (!r) return '';
+            const t = r[5]!==null ? r[5] : r[6];
+            return ` BF deg=${deg}: ${fmt_time(t,r[7])}`;
+          }
+        }
+      }
+    },
+    scales: {
+      ...BASE_SCALES,
+      y: {
+        ...BASE_SCALES.y,
+        title: { display: true, text: 'log₁₀(วินาที)', color: '#6c7a9c', font:{size:10} },
+        ticks: {
+          color: '#6c7a9c',
+          callback: v => {
+            const m = {[-3]:'<1ms',0:'1s',2:'~2min',4:'~3hr',6:'~12d',8:'~3yr',10:'~317yr',12:'~32Kyr',16:'~1Gyr',18:'~10Gyr'};
+            return m[Math.round(v)] !== undefined ? m[Math.round(v)] : '';
+          }
+        }
+      }
+    }
+  }
+});
+ 
+// ─── TABLE ─────────────────────────────────────────────
+const tbody = document.getElementById('tbody');
+DATA.forEach(([n,deg,edges,spt,kms,bf_act,bf_est,done]) => {
+  const t_bf  = bf_act !== null ? bf_act : bf_est;
+  const total_iter = Math.round(bf_est * 44000);
+  tbody.innerHTML += `<tr>
+    <td><strong>${n}</strong></td>
+    <td class="${DCLS[deg]}">${deg}</td>
+    <td>${edges}</td>
+    <td class="num" style="color:var(--sub)">${fmt_spt(total_iter)}</td>
+    <td class="num"><strong>${fmt_spt(spt)}</strong></td>
+    <td class="num" style="color:var(--c3)">${kms.toFixed(2)} ms</td>
+    <td class="num">${fmt_time(t_bf, done)}</td>
+    <td>${pill(t_bf)}</td>
+  </tr>`;
+});
+</script>
+</body>
+</html>
+ 
